@@ -2,58 +2,55 @@ const {
     prefix,
     token
 } = require('./config.json'); // config.json is gitignored because privacy and token
+const fs = require('fs');
+
+const { operator } = require('./dbObjects');
+const { Op } = require('sequelize');
 
 const Discord = require('discord.js'); // Discord JS provides the boilerplate for messing around with Discord and discord servers
 const client = new Discord.Client();
+client.commands = new Discord.Collection();
 
-client.once('ready', () => {
-    console.log('Ready!'); // When the node application has started successfully, this'll log on the console
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
+client.once('ready', async () => {
+    console.log("Ready!");
 });
 
 client.login(token); //Login to the discord app using our super secret token
 
-// The main "menu"
-client.on('message', message => {
+for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    client.commands.set(command.name, command);
+}
 
-    if(message.content.toLowerCase().includes("good bot")){
-        return message.channel.send("Thank you for your kind words. I aim to please");
-    }
-    
+
+client.on('message', async message => {
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
     const args = message.content.slice(prefix.length).split(/ +/);
-    const command = args.shift().toLowerCase();
+    const commandName = args.shift().toLowerCase();
 
-    if (command === 'args-info') {
-        if (!args.length) {
-            return message.channel.send(`You didn't provide any arguments, ${message.author}!`);
+
+    const command = client.commands.get(commandName) || client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+
+    if (!command) {
+        return message.channel.send("That command does not exist!");
+    }
+
+    if (command.args && !args.length) {
+        let reply = `You didn't provide any arguments, ${message.author}!`;
+
+        if (command.usage) {
+            reply += `\nThe proper usage would be: \`${prefix}${command.name} ${command.usage}\``;
         }
-        else if (args[0] === 'foo') {
-            return message.channel.send('bar');
-        }
-    
-        message.channel.send(`First argument: ${args[0]}`);
-    }else if (command === 'kick') {
-        // grab the "first" mentioned user from the message
-        // this will return a `User` object, just like `message.author`
-        if (!message.mentions.users.size) {
-            return message.reply('you need to tag a user in order to kick them!');
-        }
-        
-        const taggedUser = message.mentions.users.first();
-        
-        message.channel.send(`You wanted to kick: ${taggedUser.username}`);
-    }else if (command === 'avatar') {
-        if (!message.mentions.users.size) {
-            return message.channel.send(`Your avatar: <${message.author.displayAvatarURL({ format: "png", dynamic: true })}>`);
-        }
-    
-        const avatarList = message.mentions.users.map(user => {
-            return `${user.username}'s avatar: <${user.displayAvatarURL({ format: "png", dynamic: true })}>`;
-        });
-    
-        // send the entire array of strings as a message
-        // by default, discord.js will `.join()` the array with `\n`
-        message.channel.send(avatarList);
+
+        return message.channel.send(reply);
+    }
+    try {
+        command.execute(message, args);
+    } catch (error) {
+        console.error(error);
+        message.reply('there was an error trying to execute that command!');
     }
 });
