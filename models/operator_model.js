@@ -1,3 +1,8 @@
+/*
+This file contains the model mapping for my ORM (Sequelize) to map to the table "operator" in my sqlite3 database
+*/ 
+
+
 module.exports = (sequelize, DataTypes) => {
     return sequelize.define('operator_model', {
         'id': {
@@ -6,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
             primaryKey: true,
             autoIncrement: true
         },
-        'in game image': {
+        'ingameimage': {
             type: DataTypes.TEXT,
             allowNull: true
         },

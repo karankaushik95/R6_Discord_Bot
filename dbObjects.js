@@ -1,3 +1,7 @@
+/*
+Just abstracting away our database connection and usage from the main index.js
+*/
+
 const Sequelize = require('sequelize');
 
 const sequelize = new Sequelize({
@@ -5,13 +9,6 @@ const sequelize = new Sequelize({
     storage: './database/rainbow6.db'
 });
 
-var operator = require('/models/operator_model.js')(sequelize, Sequelize);
-
-
-operator.prototype.getItems = function() {
-	return operator.findAll({
-		where: { name: this.name },
-	});
-};
+var operator = require('./models/operator_model.js')(sequelize, Sequelize);
 
 module.exports = {operator};
